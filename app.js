@@ -4,11 +4,13 @@ const scoreEl = $("score");
 const statusEl = $("status");
 const shotInput = $("shot");
 const shotPreview = $("shotPreview");
+const ghStatusEl = $("ghStatus");
 
 let currentScore = 3;
 let currentShot = "";
 
 const storageKey = "tradeReviewRecords";
+const ghConfigKey = "tradeReviewGitHubConfig";
 
 const buildScoreButtons = () => {
   scoreEl.innerHTML = "";
@@ -80,6 +82,157 @@ const setStatus = (text) => {
   setTimeout(() => {
     if (statusEl.textContent === text) statusEl.textContent = "";
   }, 2500);
+};
+
+const setGhStatus = (text) => {
+  ghStatusEl.textContent = text;
+  setTimeout(() => {
+    if (ghStatusEl.textContent === text) ghStatusEl.textContent = "";
+  }, 3500);
+};
+
+const encodeBase64 = (text) => {
+  const bytes = new TextEncoder().encode(text);
+  let binary = "";
+  bytes.forEach((b) => {
+    binary += String.fromCharCode(b);
+  });
+  return btoa(binary);
+};
+
+const decodeBase64 = (b64) => {
+  const binary = atob(b64);
+  const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+};
+
+const encodePath = (path) =>
+  path
+    .split("/")
+    .map((part) => encodeURIComponent(part))
+    .join("/");
+
+const getGhConfig = () => {
+  const saved = JSON.parse(localStorage.getItem(ghConfigKey) || "{}");
+  return {
+    token: saved.token || "",
+    owner: saved.owner || "sevenill2626",
+    repo: saved.repo || "trade-review-web",
+    branch: saved.branch || "main",
+    path: saved.path || "data/records.json",
+  };
+};
+
+const saveGhConfig = (updates) => {
+  const next = { ...getGhConfig(), ...updates };
+  localStorage.setItem(ghConfigKey, JSON.stringify(next));
+};
+
+const applyGhConfigToInputs = () => {
+  const config = getGhConfig();
+  $("ghToken").value = config.token;
+  $("ghOwner").value = config.owner;
+  $("ghRepo").value = config.repo;
+  $("ghBranch").value = config.branch;
+  $("ghPath").value = config.path;
+};
+
+const readGhConfigFromInputs = () => ({
+  token: $("ghToken").value.trim(),
+  owner: $("ghOwner").value.trim(),
+  repo: $("ghRepo").value.trim(),
+  branch: $("ghBranch").value.trim() || "main",
+  path: $("ghPath").value.trim() || "data/records.json",
+});
+
+const persistGhInputs = () => {
+  saveGhConfig(readGhConfigFromInputs());
+};
+
+const githubFetch = async (url, options = {}) => {
+  const config = readGhConfigFromInputs();
+  if (!config.token) {
+    throw new Error("请先填写 GitHub Token。");
+  }
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      Accept: "application/vnd.github+json",
+      Authorization: `Bearer ${config.token}`,
+      ...(options.headers || {}),
+    },
+  });
+  const text = await response.text();
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch (err) {
+    data = null;
+  }
+  if (!response.ok) {
+    const err = new Error(
+      data?.message || `GitHub 请求失败 (${response.status})`
+    );
+    err.status = response.status;
+    throw err;
+  }
+  return data;
+};
+
+const pullFromGitHub = async () => {
+  try {
+    persistGhInputs();
+    const config = readGhConfigFromInputs();
+    const path = encodePath(config.path);
+    const apiUrl = `https://api.github.com/repos/${config.owner}/${config.repo}/contents/${path}?ref=${encodeURIComponent(
+      config.branch
+    )}`;
+    const file = await githubFetch(apiUrl);
+    const raw = decodeBase64((file.content || "").replace(/\n/g, ""));
+    const records = JSON.parse(raw || "[]");
+    saveRecords(records);
+    renderRecords();
+    setGhStatus("已从 GitHub 拉取。");
+  } catch (err) {
+    setGhStatus(err.message || "拉取失败。");
+  }
+};
+
+const pushToGitHub = async () => {
+  try {
+    persistGhInputs();
+    const config = readGhConfigFromInputs();
+    const path = encodePath(config.path);
+    const apiUrl = `https://api.github.com/repos/${config.owner}/${config.repo}/contents/${path}`;
+    const records = loadRecords();
+    const content = encodeBase64(JSON.stringify(records, null, 2));
+    let sha = "";
+    try {
+      const meta = await githubFetch(
+        `${apiUrl}?ref=${encodeURIComponent(config.branch)}`
+      );
+      sha = meta?.sha || "";
+    } catch (err) {
+      if (err.status !== 404) throw err;
+    }
+
+    const payload = {
+      message: `update trade records ${new Date().toISOString()}`,
+      content,
+      branch: config.branch,
+      ...(sha ? { sha } : {}),
+    };
+
+    await githubFetch(apiUrl, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    setGhStatus("已同步到 GitHub。");
+  } catch (err) {
+    setGhStatus(err.message || "同步失败。");
+  }
 };
 
 shotInput.addEventListener("change", async (event) => {
@@ -159,5 +312,19 @@ $("addExample").addEventListener("click", () => {
   setStatus("已填充示例。");
 });
 
+$("ghPull").addEventListener("click", pullFromGitHub);
+$("ghPush").addEventListener("click", pushToGitHub);
+$("ghClearToken").addEventListener("click", () => {
+  $("ghToken").value = "";
+  saveGhConfig({ token: "" });
+  setGhStatus("已清除令牌。");
+});
+
+["ghToken", "ghOwner", "ghRepo", "ghBranch", "ghPath"].forEach((id) => {
+  $(id).addEventListener("change", persistGhInputs);
+  $(id).addEventListener("blur", persistGhInputs);
+});
+
 buildScoreButtons();
+applyGhConfigToInputs();
 renderRecords();

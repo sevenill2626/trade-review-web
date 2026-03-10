@@ -158,6 +158,41 @@
         <div id="recordList" class="record-list"></div>
       </section>
 
+      <section class="card">
+        <div class="card-header">
+          <h2>云端同步（GitHub）</h2>
+        </div>
+        <div class="grid wide">
+          <label>
+            GitHub Token
+            <input id="ghToken" type="password" placeholder="fine-grained token" />
+            <small class="hint">仅保存在本地浏览器，不会上传到服务器。</small>
+          </label>
+          <label>
+            Owner
+            <input id="ghOwner" placeholder="sevenill2626" />
+          </label>
+          <label>
+            Repo
+            <input id="ghRepo" placeholder="trade-review-web" />
+          </label>
+          <label>
+            Branch
+            <input id="ghBranch" placeholder="main" />
+          </label>
+          <label>
+            File Path
+            <input id="ghPath" placeholder="data/records.json" />
+          </label>
+        </div>
+        <div class="actions">
+          <button class="ghost" id="ghPull">从 GitHub 拉取</button>
+          <button class="primary" id="ghPush">同步到 GitHub</button>
+          <button class="danger" id="ghClearToken">清除令牌</button>
+        </div>
+        <div class="status" id="ghStatus"></div>
+      </section>
+
       <section class="footer">
         <button class="primary" id="saveRecord">保存复盘</button>
         <span id="status" class="status"></span>
