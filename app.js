@@ -8,6 +8,7 @@ const ghStatusEl = $("ghStatus");
 
 let currentScore = 3;
 let currentShot = "";
+let isSyncing = false;
 
 const storageKey = "tradeReviewRecords";
 const ghConfigKey = "tradeReviewGitHubConfig";
@@ -199,6 +200,12 @@ const pullFromGitHub = async () => {
 };
 
 const pushToGitHub = async () => {
+  if (isSyncing) {
+    setGhStatus("正在同步中，请稍候。");
+    return;
+  }
+
+  isSyncing = true;
   try {
     persistGhInputs();
     const config = readGhConfigFromInputs();
@@ -232,6 +239,8 @@ const pushToGitHub = async () => {
     setGhStatus("已同步到 GitHub。");
   } catch (err) {
     setGhStatus(err.message || "同步失败。");
+  } finally {
+    isSyncing = false;
   }
 };
 
@@ -268,6 +277,12 @@ $("saveRecord").addEventListener("click", () => {
   saveRecords(records);
   renderRecords();
   setStatus("已保存到本地。");
+
+  const { token } = readGhConfigFromInputs();
+  if (token) {
+    setGhStatus("自动同步中...");
+    pushToGitHub();
+  }
 });
 
 $("clearAll").addEventListener("click", () => {
