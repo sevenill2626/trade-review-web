@@ -1,0 +1,169 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>交易复盘记录</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="bg-orb orb-a"></div>
+    <div class="bg-orb orb-b"></div>
+
+    <main class="page">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">记录交易复盘</p>
+          <h1>把每一笔交易变成可复用的洞见</h1>
+          <p class="subtitle">记录观点、计划、执行和结果，复盘更快更清晰。</p>
+        </div>
+        <div class="hero-meta">
+          <div class="pill">本地保存</div>
+          <div class="pill">JSON 导出</div>
+          <div class="pill">手机友好</div>
+        </div>
+      </header>
+
+      <section class="card">
+        <div class="card-header">
+          <h2>交易截图</h2>
+          <button class="ghost" id="addExample">填充示例</button>
+        </div>
+        <div class="upload">
+          <input type="file" id="shot" accept="image/*" />
+          <label for="shot" class="upload-drop">
+            <div class="upload-icon">+</div>
+            <div>拖拽或点击上传交易截图</div>
+            <small>支持 PNG / JPG</small>
+          </label>
+          <div class="upload-preview" id="shotPreview"></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-header">
+          <h2>基本信息</h2>
+        </div>
+        <div class="grid">
+          <label>
+            交易类型
+            <select id="tradeType">
+              <option>Breakout</option>
+              <option>Reversal</option>
+              <option>Trend Follow</option>
+              <option>Mean Reversion</option>
+            </select>
+          </label>
+          <label>
+            交易品种
+            <input id="symbol" placeholder="MES / BTC / AAPL" />
+          </label>
+          <label>
+            方向
+            <select id="direction">
+              <option>做多</option>
+              <option>做空</option>
+            </select>
+          </label>
+          <label>
+            入场方式
+            <select id="entryType">
+              <option>限价</option>
+              <option>市价</option>
+              <option>回踩确认</option>
+              <option>突破确认</option>
+            </select>
+          </label>
+          <label>
+            交易日期
+            <input id="tradeDate" type="date" />
+          </label>
+          <label>
+            时间
+            <input id="tradeTime" type="time" />
+          </label>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-header">
+          <h2>交易记录</h2>
+        </div>
+        <div class="grid wide">
+          <label>
+            入场理由
+            <textarea id="entryReason" placeholder="关键结构、量能、趋势阶段等"></textarea>
+          </label>
+          <label>
+            交易计划
+            <textarea id="plan" placeholder="入场、止损、止盈、加减仓方案"></textarea>
+          </label>
+          <label>
+            执行过程
+            <textarea id="execution" placeholder="执行中遇到的偏差与应对"></textarea>
+          </label>
+          <label>
+            交易总结
+            <textarea id="summary" placeholder="今天做对了什么，下一次要改什么"></textarea>
+          </label>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-header">
+          <h2>结果统计</h2>
+        </div>
+        <div class="grid">
+          <label>
+            盈亏 (P/L)
+            <input id="pl" type="number" step="0.01" placeholder="0.00" />
+          </label>
+          <label>
+            风险回报 R
+            <input id="rr" type="number" step="0.1" placeholder="1.5" />
+          </label>
+          <label>
+            执行质量
+            <select id="quality">
+              <option>非常好</option>
+              <option>良好</option>
+              <option>一般</option>
+              <option>较差</option>
+            </select>
+          </label>
+          <label>
+            情绪评分
+            <select id="emotion">
+              <option>冷静</option>
+              <option>专注</option>
+              <option>紧张</option>
+              <option>冲动</option>
+            </select>
+          </label>
+        </div>
+        <div class="score-row">
+          <span>打分 (1-5)</span>
+          <div class="score" id="score"></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-header">
+          <h2>最近记录</h2>
+          <div class="actions">
+            <button class="ghost" id="exportJson">导出 JSON</button>
+            <button class="danger" id="clearAll">清空</button>
+          </div>
+        </div>
+        <div id="recordList" class="record-list"></div>
+      </section>
+
+      <section class="footer">
+        <button class="primary" id="saveRecord">保存复盘</button>
+        <span id="status" class="status"></span>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
