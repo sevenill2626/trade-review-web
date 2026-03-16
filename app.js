@@ -53,6 +53,11 @@ const saveRecords = (records) => {
   localStorage.setItem(storageKey, JSON.stringify(records));
 };
 
+const formatField = (label, value) => {
+  if (!value) return "";
+  return `<div><strong>${label}：</strong>${value}</div>`;
+};
+
 const renderRecords = () => {
   const list = $("recordList");
   const records = loadRecords();
@@ -63,9 +68,22 @@ const renderRecords = () => {
     return;
   }
 
-  records.slice(0, 6).forEach((record) => {
+  records.forEach((record, index) => {
     const item = document.createElement("div");
     item.className = "record";
+    const detailsId = `record-details-${record.id || index}`;
+    const shotHtml = record.shot
+      ? `<div class="record-shot"><img src="${record.shot}" alt="交易截图" /></div>`
+      : "";
+    const detailsHtml = `
+      ${formatField("入场理由", record.entryReason)}
+      ${formatField("交易计划", record.plan)}
+      ${formatField("执行过程", record.execution)}
+      ${formatField("交易总结", record.summary)}
+      ${formatField("入场方式", record.entryType)}
+      ${formatField("情绪评分", record.emotion)}
+      ${shotHtml}
+    `;
     item.innerHTML = `
       <h3>${record.symbol || "未命名"} (${record.tradeType})</h3>
       <small>${record.tradeDate || "未填日期"} ${record.tradeTime || ""}</small>
@@ -73,8 +91,20 @@ const renderRecords = () => {
       record.rr || "-"
     }</div>
       <small>评分: ${record.score} · 执行质量: ${record.quality}</small>
+      <button class="ghost record-toggle" type="button" data-target="${detailsId}">查看详情</button>
+      <div class="record-details" id="${detailsId}">${detailsHtml}</div>
     `;
     list.appendChild(item);
+  });
+
+  list.querySelectorAll(".record-toggle").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const targetId = btn.getAttribute("data-target");
+      const details = targetId ? document.getElementById(targetId) : null;
+      if (!details) return;
+      const isOpen = details.classList.toggle("open");
+      btn.textContent = isOpen ? "收起详情" : "查看详情";
+    });
   });
 };
 

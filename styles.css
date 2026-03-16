@@ -302,6 +302,35 @@ button {
   color: var(--muted);
 }
 
+.record-toggle {
+  width: fit-content;
+}
+
+.record-details {
+  display: none;
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+  color: var(--muted);
+  font-size: 13px;
+  gap: 6px;
+}
+
+.record-details.open {
+  display: grid;
+}
+
+.record-details strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.record-shot img {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+}
+
 @keyframes slideUp {
   from {
     opacity: 0;
