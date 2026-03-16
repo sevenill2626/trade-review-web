@@ -9,6 +9,10 @@ const ghStatusEl = $("ghStatus");
 let currentScore = 3;
 let currentShot = "";
 let isSyncing = false;
+let editingId = null;
+let editingIndex = null;
+
+const cancelEditBtn = $("cancelEdit");
 
 const storageKey = "tradeReviewRecords";
 const ghConfigKey = "tradeReviewGitHubConfig";
@@ -58,6 +62,60 @@ const formatField = (label, value) => {
   return `<div><strong>${label}：</strong>${value}</div>`;
 };
 
+const setEditMode = (record, index) => {
+  editingId = record?.id || null;
+  editingIndex = typeof index === "number" ? index : null;
+  $("saveRecord").textContent = "更新复盘";
+  cancelEditBtn.style.display = "inline-flex";
+
+  $("tradeType").value = record.tradeType || "Breakout";
+  $("symbol").value = record.symbol || "";
+  $("direction").value = record.direction || "做多";
+  $("entryType").value = record.entryType || "限价";
+  $("tradeDate").value = record.tradeDate || "";
+  $("tradeTime").value = record.tradeTime || "";
+  $("entryReason").value = record.entryReason || "";
+  $("plan").value = record.plan || "";
+  $("execution").value = record.execution || "";
+  $("summary").value = record.summary || "";
+  $("pl").value = record.pl || "";
+  $("rr").value = record.rr || "";
+  $("quality").value = record.quality || "良好";
+  $("emotion").value = record.emotion || "专注";
+  currentScore = record.score || 3;
+  currentShot = record.shot || "";
+  updateScoreUI();
+  shotPreview.innerHTML = currentShot
+    ? `<img src="${currentShot}" alt="交易截图" />`
+    : "";
+  setStatus("进入编辑模式。");
+};
+
+const resetForm = () => {
+  editingId = null;
+  editingIndex = null;
+  $("saveRecord").textContent = "保存复盘";
+  cancelEditBtn.style.display = "none";
+  $("tradeType").value = "Breakout";
+  $("symbol").value = "";
+  $("direction").value = "做多";
+  $("entryType").value = "限价";
+  $("tradeDate").value = "";
+  $("tradeTime").value = "";
+  $("entryReason").value = "";
+  $("plan").value = "";
+  $("execution").value = "";
+  $("summary").value = "";
+  $("pl").value = "";
+  $("rr").value = "";
+  $("quality").value = "良好";
+  $("emotion").value = "专注";
+  currentScore = 3;
+  currentShot = "";
+  updateScoreUI();
+  shotPreview.innerHTML = "";
+};
+
 const renderRecords = () => {
   const list = $("recordList");
   const records = loadRecords();
@@ -71,7 +129,8 @@ const renderRecords = () => {
   records.forEach((record, index) => {
     const item = document.createElement("div");
     item.className = "record";
-    const detailsId = `record-details-${record.id || index}`;
+    const recordId = record.id || `idx-${index}`;
+    const detailsId = `record-details-${recordId}`;
     const shotHtml = record.shot
       ? `<div class="record-shot"><img src="${record.shot}" alt="交易截图" /></div>`
       : "";
@@ -91,7 +150,11 @@ const renderRecords = () => {
       record.rr || "-"
     }</div>
       <small>评分: ${record.score} · 执行质量: ${record.quality}</small>
-      <button class="ghost record-toggle" type="button" data-target="${detailsId}">查看详情</button>
+      <div class="record-actions">
+        <button class="ghost record-toggle" type="button" data-target="${detailsId}">查看详情</button>
+        <button class="ghost record-edit" type="button" data-id="${recordId}" data-index="${index}">修改</button>
+        <button class="danger record-delete" type="button" data-id="${recordId}" data-index="${index}">删除</button>
+      </div>
       <div class="record-details" id="${detailsId}">${detailsHtml}</div>
     `;
     list.appendChild(item);
@@ -104,6 +167,31 @@ const renderRecords = () => {
       if (!details) return;
       const isOpen = details.classList.toggle("open");
       btn.textContent = isOpen ? "收起详情" : "查看详情";
+    });
+  });
+
+  list.querySelectorAll(".record-delete").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const ok = window.confirm("确认删除这条记录吗？");
+      if (!ok) return;
+      const id = btn.getAttribute("data-id");
+      const index = Number(btn.getAttribute("data-index"));
+      const updated = loadRecords().filter((record, i) => {
+        if (id && record.id) return String(record.id) !== String(id);
+        return i !== index;
+      });
+      saveRecords(updated);
+      renderRecords();
+      setStatus("已删除该记录。");
+    });
+  });
+
+  list.querySelectorAll(".record-edit").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const index = Number(btn.getAttribute("data-index"));
+      const record = loadRecords()[index];
+      if (!record) return;
+      setEditMode(record, index);
     });
   });
 };
@@ -283,7 +371,7 @@ shotInput.addEventListener("change", async (event) => {
 
 $("saveRecord").addEventListener("click", () => {
   const record = {
-    id: Date.now(),
+    id: editingId || Date.now(),
     tradeType: $("tradeType").value,
     symbol: $("symbol").value.trim(),
     direction: $("direction").value,
@@ -303,16 +391,43 @@ $("saveRecord").addEventListener("click", () => {
   };
 
   const records = loadRecords();
-  records.unshift(record);
-  saveRecords(records);
-  renderRecords();
-  setStatus("已保存到本地。");
+  if (editingId || editingIndex !== null) {
+    let updated = false;
+    const next = records.map((item, idx) => {
+      if (editingId && String(item.id) === String(editingId)) {
+        updated = true;
+        return record;
+      }
+      if (!editingId && idx === editingIndex) {
+        updated = true;
+        return record;
+      }
+      return item;
+    });
+    if (!updated) {
+      next.unshift(record);
+    }
+    saveRecords(next);
+    renderRecords();
+    resetForm();
+    setStatus("已更新该记录。");
+  } else {
+    records.unshift(record);
+    saveRecords(records);
+    renderRecords();
+    setStatus("已保存到本地。");
+  }
 
   const { token } = readGhConfigFromInputs();
   if (token) {
     setGhStatus("自动同步中...");
     pushToGitHub();
   }
+});
+
+cancelEditBtn.addEventListener("click", () => {
+  resetForm();
+  setStatus("已取消编辑。");
 });
 
 $("clearAll").addEventListener("click", () => {
@@ -373,3 +488,4 @@ $("ghClearToken").addEventListener("click", () => {
 buildScoreButtons();
 applyGhConfigToInputs();
 renderRecords();
+resetForm();
